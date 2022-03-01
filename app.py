@@ -71,6 +71,37 @@ def precip():
 
 @app.route("/api/v1.0/stations")
 #Return a JSON list of stations from the dataset.
+def stations():
+    #Create session using engine
+    session = Session(engine)
+    #Query, pass to list, and jsonify
+    data = session.query(Station.station, Station.name).all()
+    station_list = []
+    for station, name in data:
+        sdict = {}
+        sdict['station'] = station
+        sdict['name'] = name
+        station_list.append(sdict)
+    session.close()
+    return jasonify(station_list)
+
+@app.route("/api/v1.0/tobs")
+# Return a JSON list of temperature observations (TOBS) for the previous year.
+def tobs():
+    #Create session using engine
+    session = Session(engine)
+    data = session.query(Measurement.date, Measurement.tobs).filter(Measurement.station=='USC00519281').all()
+    tobs_list = []
+    for date, tobs in data:
+        pdict = {}
+        pdict["date"] = date
+        pdict["tobs"] = tobs
+        
+        precip_list.append(tobs_list)
+    session.close()
+    return jsonify(precip_list)
+
+
 
 if __name__ == "__main__":
     app.run(debug=True)
