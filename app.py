@@ -17,20 +17,12 @@ Base = automap_base()
 # reflect the tables
 Base.prepare(engine, reflect=True)
 
-# Create our session (link) from Python to the DB
-session = Session(engine)
+
 
 # Save references to each table
 Measurement = Base.classes.measurement
 Station = Base.classes.station
 
-# Find the most recent date in the data set.
-first_date = session.query(Measurement.date).order_by(Measurement.date.desc()).first()
-
-# Starting from the most recent data point in the database, calculate the date one year from the last date in data set.
-query_date = dt.date(2017, 8, 23) - dt.timedelta(days=365)
-
-session.close()
 #Setup App
 app = Flask(__name__)
 
@@ -90,18 +82,33 @@ def stations():
 def tobs():
     #Create session using engine
     session = Session(engine)
+    #Query, pass to list, and jsonify
     data = session.query(Measurement.date, Measurement.tobs).filter(Measurement.station=='USC00519281').all()
     tobs_list = []
     for date, tobs in data:
-        pdict = {}
-        pdict["date"] = date
-        pdict["tobs"] = tobs
+        tdict = {}
+        tdict["date"] = date
+        tdict["tobs"] = tobs
         
-        precip_list.append(tobs_list)
+        tobs_list.append(tdict)
     session.close()
-    return jsonify(precip_list)
+    return jsonify(tobs_list)
 
-
+@app.route("/api/v1.0/<start>")
+def start(start_date):
+    #Create session using engine
+    session = Session(engine)
+    #Query, pass to list, and jsonify
+    meas_results = session.query(func.min(Measurement.tobs), func.max(Measurement.tobs), func.avg(Measurement.tobs)).filter(Measurement.date>=start_date).all()
+    stat_list = []
+    for min, max, avg in meas_results:
+        stdict = {}
+        stdict["Min"] = min
+        stdict["Max"] = max
+        stdict["Average"] = avg
+        stat_list.append(stdict)
+    session.close()
+    return jsonify(stat_list)
 
 if __name__ == "__main__":
     app.run(debug=True)
